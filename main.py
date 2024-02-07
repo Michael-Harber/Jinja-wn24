@@ -5,10 +5,24 @@ import os
 import json
 
 import utils as util
+
+from models import db
+from models.category import Category
+from models.recipe import Recipe
+
+# loads default recipe data
+from default_data import create_default_data
+
+
+
 app = Flask(__name__)
 
 
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recipes.db'
+db.init_app(app)
+
 
 @app.route('/')
 def index():
@@ -21,6 +35,30 @@ def index():
 def about():
   title = "About"
   return render_template("about.html", title=title)
+
+@app.route("/recipes")
+def recipes():
+    all_recipes = Recipe.query.all()
+    title = "Recipes"
+    context = {
+      "title": title,
+      "recipes": all_recipes
+    }
+    return render_template("recipes.html", **context)
+
+@app.route("/recipe/<int:recipe_id>")
+def recipe(recipe_id):
+    this_recipe = Recipe.query.get(recipe_id)
+    title = "Recipe"
+    context = {
+      "title": "Recipe",
+      "recipe": this_recipe
+    }
+    if this_recipe:
+        return render_template('recipe.html', **context)
+    else:
+        return render_template("404.html",title="404"), 404
+
 
 @app.route('/users')
 def users():
@@ -122,5 +160,13 @@ def movies():
   
   return render_template("movies.html",**context)
 
+with app.app_context():
+  db.create_all()
+  #removes all data and loads defaults:
+  create_default_data(db,Recipe,Category)
+
 
 app.run(host='0.0.0.0', port=81)
+
+
+
