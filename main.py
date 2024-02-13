@@ -6,6 +6,10 @@ import json
 
 import utils as util
 
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+
+
 from models import db
 from models.category import Category
 from models.recipe import Recipe
@@ -159,6 +163,16 @@ def movies():
   }
   
   return render_template("movies.html",**context)
+
+
+class RecipeView(ModelView):
+  column_searchable_list = ['name', 'author']
+
+admin = Admin(app)
+admin.url = '/admin/' #would not work on repl w/o this!
+admin.add_view(RecipeView(Recipe, db.session))
+admin.add_view(ModelView(Category, db.session))
+
 
 with app.app_context():
   db.create_all()
