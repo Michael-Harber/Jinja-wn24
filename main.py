@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, redirect, flash
 
 import os
 
 import json
 
 import utils as util
+
+from forms import RecipeAdd
 
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
@@ -26,6 +28,42 @@ app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default_secret_ke
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recipes.db'
 db.init_app(app)
+
+@app.route('/add_recipe', methods=['GET', 'POST'])
+def add_recipe():
+    form = RecipeAdd()
+
+    # Populate the category choices dynamically
+    form.category_id.choices = [(category.id, category.name) for category in Category.query.all()]
+
+    if request.method == 'POST' and form.validate_on_submit():
+        # Create a new recipe instance and add it to the database
+        new_recipe = Recipe(
+            name=form.name.data,
+            author=form.author.data,
+            description=form.description.data,
+            ingredients=form.ingredients.data,
+            instructions=form.instructions.data,
+            rating=form.rating.data,
+            category_id=form.category_id.data
+        )
+        db.session.add(new_recipe)
+        db.session.commit()
+
+        #inform user of success!
+        flash('Recipe added successfully!', 'success')
+        return redirect(url_for('recipes'))
+
+    #form did NOT validate
+    if request.method == 'POST' and not form.validate():
+          for field, errors in form.errors.items():
+              for error in errors:
+                  flash(f"Error in {field}: {error}", 'error')
+          return render_template('add_recipe.html', form=form)
+
+    #default via GET shows form  
+    return render_template('add_recipe.html', form=form)
+
 
 
 @app.route('/')
@@ -52,7 +90,7 @@ def recipes():
 
 @app.route("/recipe/<int:recipe_id>")
 def recipe(recipe_id):
-    this_recipe = Recipe.query.get(recipe_id)
+    this_recipe = db.session.get(Recipe, recipe_id)
     title = "Recipe"
     context = {
       "title": "Recipe",
