@@ -6,7 +6,11 @@ import json
 
 import utils as util
 
-from forms import RecipeAdd
+#wtf forms import
+from forms import RecipeAdd, RecipeEdit
+
+#add CSRF protection to forms
+from flask_wtf import CSRFProtect
 
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
@@ -26,9 +30,52 @@ app = Flask(__name__)
 
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key')
 
+#add csrf after secret key
+csrf = CSRFProtect(app)
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recipes.db'
 db.init_app(app)
 
+#DELETE
+@app.route('/delete_recipe/<int:id>', methods=['POST'])
+def delete_recipe(id):
+    recipe = Recipe.query.get_or_404(id)
+    db.session.delete(recipe)
+    db.session.commit()
+    flash('Recipe deleted successfully!', 'success')
+    return redirect(url_for('recipes'))
+
+
+
+#EDIT RECIPE
+@app.route('/edit_recipe/<int:recipe_id>', methods=['GET', 'POST'])
+def edit_recipe(recipe_id):
+    # Retrieve the recipe from the database
+    recipe = Recipe.query.get_or_404(recipe_id)
+    form = RecipeEdit(obj=recipe)
+
+    # Populate categories in the form
+    form.category_id.choices = [(category.id, category.name) for category in Category.query.all()]
+
+
+    if request.method == 'POST' and form.validate_on_submit():
+        form.populate_obj(recipe)  # Update the recipe object with form data
+        db.session.commit()
+        flash('Recipe updated successfully!', 'success')
+        return redirect(url_for('recipes'))
+
+    #form did NOT validate
+    if request.method == 'POST' and not form.validate():
+          for field, errors in form.errors.items():
+              for error in errors:
+                  flash(f"Error in {field}: {error}", 'error')
+          return render_template('edit_recipe.html', form=form, recipe=recipe)
+
+    return render_template('edit_recipe.html', form=form, recipe=recipe)
+
+
+#add recipe
 @app.route('/add_recipe', methods=['GET', 'POST'])
 def add_recipe():
     form = RecipeAdd()
