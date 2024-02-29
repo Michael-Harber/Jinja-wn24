@@ -7,7 +7,7 @@ import json
 import utils as util
 
 #wtf forms import
-from forms import RecipeAdd, RecipeEdit, LoginForm, RegistrationForm
+from forms import RecipeAdd, RecipeEdit, LoginForm, RegistrationForm, RecipePicForm
 
 #add CSRF protection to forms
 from flask_wtf import CSRFProtect
@@ -34,6 +34,10 @@ app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default_secret_ke
 #add csrf after secret key
 csrf = CSRFProtect(app)
 
+# Set the upload folder for recipe pictures
+UPLOAD_FOLDER = 'static/recipe_pics'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recipes.db'
 db.init_app(app)
@@ -47,6 +51,18 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Chef, int(user_id))
+
+#RECIPE_PIC
+@app.route('/recipe_pic/<int:recipe_id>', methods=['GET', 'POST'])
+def recipe_pic(recipe_id):
+    form = RecipePicForm()  # Instantiate the form
+    if form.validate_on_submit():
+        # Save the uploaded file
+        file = form.picture.data
+        filename = f"recipe_{recipe_id}.jpg"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return redirect(url_for('recipe', recipe_id=recipe_id))
+    return render_template('recipe_pic.html', form=form)
 
 #LOGIN
 @app.route('/login', methods=['GET', 'POST'])

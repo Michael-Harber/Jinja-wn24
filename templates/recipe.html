@@ -6,6 +6,11 @@
     <h3>{{ recipe.name }}</h3>
 </header>
 <div class="w3-container">
+  <div class="flexible">
+    <div style="max-width:300px">
+        <img src="/static/recipe_pics/recipe_{{ recipe.id }}.jpg" />
+    </div>
+  </div>
     <p>Author: {{ recipe.author }}</p>
     <p>Description: {{ recipe.description }}</p>
     <p>Ingredients: {{ recipe.ingredients }}</p>
